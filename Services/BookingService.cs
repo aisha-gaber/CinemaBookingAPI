@@ -12,12 +12,15 @@ namespace CinemaBookingAPI.Services
         private readonly IBookingRepository _repository;
         private readonly ICustomerRepository _customerRepository;
         private readonly IShowTimeRepository _showTimeRepository;
+        private readonly IEmailService _emailService;
 
-        public BookingService(IBookingRepository repository, ICustomerRepository customerRepository, IShowTimeRepository showTimeRepository)
+        public BookingService(IBookingRepository repository, ICustomerRepository customerRepository,
+            IShowTimeRepository showTimeRepository, IEmailService emailService)
         {
             _repository = repository;
             _customerRepository = customerRepository;
             _showTimeRepository = showTimeRepository;
+            _emailService = emailService;
         }
 
         public async Task<List<BookingDto>> GetAllAsync(int? customerId, string? customerName, int? showTimeId, string? status)
@@ -68,6 +71,8 @@ namespace CinemaBookingAPI.Services
             booking.Customer = customer;
             booking.ShowTime = showTime;
 
+            await _emailService.SendBookingConfirmationAsync(customer.Email, customer.Name, booking.Id);
+
             return MapToDto(booking);
         }
 
@@ -79,6 +84,8 @@ namespace CinemaBookingAPI.Services
             booking.Status = BookingStatus.Cancelled;
             _repository.Update(booking);
             await _repository.SaveChangesAsync();
+
+            await _emailService.SendBookingCancellationAsync(booking.Customer.Name, booking.Customer.Name, booking.Id);
         }
 
         private static BookingDto MapToDto(Booking b) => new()
@@ -87,7 +94,7 @@ namespace CinemaBookingAPI.Services
             BookingDate = b.BookingDate,
             Status = b.Status,
             CustomerId = b.CustomerId,
-            CustomerName = b.Customer != null ? b.Customer.Name : "",
+            CustomerName = b.Customer?.Name ?? "",
             ShowTimeId = b.ShowTimeId
         };
     }
