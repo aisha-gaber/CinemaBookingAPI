@@ -15,7 +15,7 @@ namespace CinemaBookingAPI.Services
             _repository = repository;
         }
 
-        public async Task<List<MovieDtoV2>> GetAllAsync(string? search, string? genre, string? sortBy, bool descending, int page, int pageSize)
+        public async Task<PagedResult<MovieDtoV2>> GetAllAsync(string? search, string? genre, string? sortBy, bool descending, int page, int pageSize)
         {
             var movies = await _repository.GetAllAsync();
 
@@ -32,9 +32,16 @@ namespace CinemaBookingAPI.Services
                 _ => movies
             };
 
+            var totalCount = movies.Count;
             var paged = movies.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
-            return paged.Select(MapToDtoV2).ToList();
+            return new PagedResult<MovieDtoV2>
+            {
+                Items = paged.Select(MapToDtoV2).ToList(),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
         }
 
         public async Task<MovieDtoV2> GetByIdAsync(int id)
